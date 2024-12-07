@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape>
+            <solid android:color="#F44336" /> <!-- Warna merah -->
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- Icon -->
+    <item>
+        <bitmap
+            android:src="@drawable/baseline_texture_24"
+        android:gravity="center"/>
+    </item>
+</layer-list>
