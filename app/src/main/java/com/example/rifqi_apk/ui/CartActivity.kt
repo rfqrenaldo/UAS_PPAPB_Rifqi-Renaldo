@@ -16,42 +16,49 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Kelas untuk aktivitas keranjang belanja (CartActivity)
 class CartActivity : AppCompatActivity() {
 
+    // View binding untuk mengakses elemen UI secara langsung
     private lateinit var binding: ActivityCartBinding
+
+    // Instance database lokal Room
     private lateinit var appDatabase: AppDatabase
+
+    // Adapter untuk RecyclerView yang menampilkan data keranjang
     private lateinit var cartAdapter: CartAdapter
 
-    // Variabel untuk menyimpan data input dari Popup
+    // Variabel untuk menyimpan data input dari Popup (nama penerima, nomor telepon, alamat)
     private var namaPenerima: String? = null
     private var nomorTelepon: String? = null
     private var alamat: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityCartBinding.inflate(layoutInflater)
+        binding = ActivityCartBinding.inflate(layoutInflater) // Inisialisasi ViewBinding
         setContentView(binding.root)
 
-        // Inisialisasi Room Database
+        // Inisialisasi database Room
         appDatabase = AppDatabase.getInstance(this)
 
         // Inisialisasi RecyclerView dan Adapter
-        cartAdapter = CartAdapter(appDatabase, this)  // Menyertakan CartActivity untuk update total harga
-        binding.rvCart.layoutManager = LinearLayoutManager(this)
-        binding.rvCart.adapter = cartAdapter
+        cartAdapter = CartAdapter(appDatabase, this)  // Menggunakan adapter yang terhubung dengan database
+        binding.rvCart.layoutManager = LinearLayoutManager(this) // Mengatur tata letak RecyclerView secara vertikal
+        binding.rvCart.adapter = cartAdapter // Menghubungkan adapter ke RecyclerView
 
-        // Ambil data keranjang dari database
+        // Memuat data keranjang dari database
         loadCartItems()
 
-        // Tombol Back
+        // Tombol kembali ke halaman utama
         binding.btnBack.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, MainActivity::class.java) // Intent ke MainActivity
             startActivity(intent)
         }
 
-        // Tombol Checkout
+        // Tombol checkout untuk mengarahkan ke halaman Invoice
         binding.btnCheckout.setOnClickListener {
             if (namaPenerima != null && nomorTelepon != null && alamat != null) {
+                // Jika data pengiriman sudah diisi, lanjut ke InvoiceActivity
                 val intent = Intent(this, InvoiceActivity::class.java).apply {
                     putExtra("NAMA_PENERIMA", namaPenerima)
                     putExtra("NOMOR_TELEPON", nomorTelepon)
@@ -59,7 +66,7 @@ class CartActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             } else {
-                // Informasi tidak lengkap, tampilkan pesan
+                // Jika data belum lengkap, tampilkan pesan peringatan
                 AlertDialog.Builder(this)
                     .setMessage("Silakan isi informasi pengiriman terlebih dahulu.")
                     .setPositiveButton("OK", null)
@@ -67,9 +74,9 @@ class CartActivity : AppCompatActivity() {
             }
         }
 
-        // Tombol Add Home
+        // Tombol untuk menambahkan data pengiriman (popup input form)
         binding.btnAddhome.setOnClickListener {
-            // Menampilkan Popup untuk Input Data
+            // Menampilkan Popup Input
             val dialog = AlertDialog.Builder(this)
             val dialogView = layoutInflater.inflate(R.layout.popup_input_form, null)
 
@@ -79,32 +86,30 @@ class CartActivity : AppCompatActivity() {
 
             dialog.setView(dialogView)
             dialog.setPositiveButton("OK") { _, _ ->
-                // Mengambil data yang diinputkan
+                // Menyimpan data input pengguna
                 namaPenerima = etNamaPenerima.text.toString()
                 nomorTelepon = etNomorTelepon.text.toString()
                 alamat = etAlamat.text.toString()
-
-                // Menyimpan data yang diinputkan untuk digunakan saat Checkout
-                // Data ini tidak dikirimkan ke InvoiceActivity sampai tombol Checkout ditekan
             }
             dialog.setNegativeButton("Batal", null)
             dialog.show()
         }
     }
 
+    // Fungsi untuk memuat data keranjang dari database
     private fun loadCartItems() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Ambil data keranjang dari database di thread IO
+                // Ambil data keranjang di thread IO (untuk operasi database)
                 val cartItems = appDatabase.cartDao().getAllCartItems()
 
                 // Kembali ke thread utama untuk memperbarui UI
                 withContext(Dispatchers.Main) {
-                    cartAdapter.setCartItems(cartItems)
-                    updateTotalPrice(cartItems)
+                    cartAdapter.setCartItems(cartItems) // Mengisi data pada adapter
+                    updateTotalPrice(cartItems) // Menghitung dan menampilkan total harga
 
+                    // Menampilkan pesan jika keranjang kosong
                     if (cartItems.isEmpty()) {
-                        // Menampilkan pesan jika keranjang kosong
                         binding.tvEmptyCart.visibility = View.VISIBLE
                     } else {
                         binding.tvEmptyCart.visibility = View.GONE
@@ -119,10 +124,10 @@ class CartActivity : AppCompatActivity() {
         }
     }
 
-    // Fungsi untuk menghitung total harga
+    // Fungsi untuk menghitung dan memperbarui total harga
     fun updateTotalPrice(cartItems: List<Cart>) {
-        val totalPrice = cartItems.sumOf { it.totalHarga }
-        binding.tvTotalHarga.text = "Total Harga: Rp $totalPrice"
+        val totalPrice = cartItems.sumOf { it.totalHarga } // Menghitung total harga semua item
+        binding.tvTotalHarga.text = "Total Harga: Rp $totalPrice" // Menampilkan total harga
 
         // Menampilkan atau menyembunyikan pesan "Keranjang kosong"
         if (cartItems.isEmpty()) {
@@ -132,4 +137,3 @@ class CartActivity : AppCompatActivity() {
         }
     }
 }
-

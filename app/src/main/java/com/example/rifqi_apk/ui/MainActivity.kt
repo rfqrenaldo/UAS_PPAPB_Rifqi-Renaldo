@@ -19,98 +19,108 @@ import retrofit2.Response
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
-    private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var barangAdapter: BarangAdapter
-    private lateinit var appDatabase: AppDatabase
+    private lateinit var binding: ActivityMainBinding  // Binding untuk mengakses elemen UI dari activity_main.xml
+    private lateinit var sharedPreferences: SharedPreferences  // SharedPreferences untuk menyimpan status login
+    private lateinit var barangAdapter: BarangAdapter  // Adapter untuk RecyclerView yang menampilkan daftar barang
+    private lateinit var appDatabase: AppDatabase  // Database lokal untuk menyimpan data keranjang belanja
 
     companion object {
-        private const val TAG = "MainActivity"
+        private const val TAG = "MainActivity"  // TAG untuk logging
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
+        binding = ActivityMainBinding.inflate(layoutInflater)  // Meng-inflate layout menggunakan ViewBinding
         setContentView(binding.root)
 
-        sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)  // Mengakses SharedPreferences untuk status login
 
-        // Inisialisasi RecyclerView
+        // Inisialisasi RecyclerView dengan adapter yang memiliki callback untuk menambahkan barang ke keranjang
         barangAdapter = BarangAdapter { barang, jumlah ->
-            addToCart(barang, jumlah)
+            addToCart(barang, jumlah)  // Menambahkan barang ke keranjang ketika dipilih
         }
-        binding.rvProducts.layoutManager = GridLayoutManager(this, 2) // Tampilan 2 kolom
-        binding.rvProducts.adapter = barangAdapter
+        binding.rvProducts.layoutManager = GridLayoutManager(this, 2)  // Menampilkan barang dalam 2 kolom
+        binding.rvProducts.adapter = barangAdapter  // Menghubungkan RecyclerView dengan adapter
 
-        // Inisialisasi Room Database
+        // Inisialisasi Room Database untuk mengakses keranjang belanja
         appDatabase = AppDatabase.getInstance(this)
 
-        // Logging URL API yang akan dipanggil
+        // Logging URL API yang akan dipanggil untuk mengambil data barang
         Log.d(TAG, "Request URL: ${RetrofitInstance.getInstance().baseUrl()}barang")
 
+        // Mengambil data barang dari API
         fetchBarangFromApi()
 
-        // Tombol Logout
+        // Tombol logout
         binding.btnLogout.setOnClickListener {
+            // Menghapus status login dari SharedPreferences
             val editor = sharedPreferences.edit()
-            editor.putBoolean("isLoggedIn", false)
-            editor.remove("username")
+            editor.putBoolean("isLoggedIn", false)  // Mengubah status login menjadi false
+            editor.remove("username")  // Menghapus username yang tersimpan
             editor.apply()
 
+            // Menampilkan toast sebagai konfirmasi logout
             Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+            // Mengarahkan pengguna ke halaman login
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
-            finish()
+            finish()  // Menutup MainActivity
         }
 
-        //tombol daftar keranjang
-        binding.btnCart.setOnClickListener{
+        // Tombol untuk membuka daftar keranjang
+        binding.btnCart.setOnClickListener {
             val intent = Intent(this, CartActivity::class.java)
-            startActivity(intent)
+            startActivity(intent)  // Membuka CartActivity untuk menampilkan keranjang belanja
         }
     }
 
+    // Fungsi untuk mengambil data barang dari API menggunakan Retrofit
     private fun fetchBarangFromApi() {
-        val call = RetrofitInstance.api.getBarang()
+        val call = RetrofitInstance.api.getBarang()  // Memanggil API untuk mendapatkan daftar barang
 
         call.enqueue(object : Callback<List<Barang>> {
             override fun onResponse(call: Call<List<Barang>>, response: Response<List<Barang>>) {
                 if (response.isSuccessful) {
                     Log.d("Retrofit", "Response successful: ${response.body()}")
 
-                    // Dapatkan data barang dari response
-                    val barangList = response.body() ?: emptyList() // Pastikan data tidak null
+                    // Menyimpan daftar barang yang diterima dari response
+                    val barangList = response.body() ?: emptyList()  // Jika data kosong, kirimkan list kosong
 
-                    // Set data ke adapter
+                    // Menampilkan data barang ke RecyclerView melalui adapter
                     barangAdapter.setBarangList(barangList)
                 } else {
+                    // Menampilkan error jika response gagal
                     Log.e("Retrofit", "Response error: Code ${response.code()} - ${response.message()}")
                     Toast.makeText(this@MainActivity, "Failed to fetch data", Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<List<Barang>>, t: Throwable) {
+                // Menampilkan error jika API call gagal
                 Log.e("Retrofit", "API call failed: ${t.message}")
                 Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
     }
 
+    // Fungsi untuk menambahkan barang ke keranjang
     private fun addToCart(barang: Barang, jumlah: Int) {
-        val totalHarga = barang.harga * jumlah
+        val totalHarga = barang.harga * jumlah  // Menghitung total harga berdasarkan jumlah yang dipilih
         val cartItem = Cart(
-            namaBarang = barang.namaBarang,
-            jumlah = jumlah,
-            harga = barang.harga,
-            totalHarga = totalHarga
+            namaBarang = barang.namaBarang,  // Menyimpan nama barang
+            jumlah = jumlah,  // Menyimpan jumlah barang
+            harga = barang.harga,  // Menyimpan harga barang per item
+            totalHarga = totalHarga  // Menyimpan total harga
         )
 
-        // Menambahkan item ke keranjang menggunakan Room
+        // Menambahkan item ke keranjang menggunakan Room Database
         Thread {
-            appDatabase.cartDao().addToCart(cartItem)
+            appDatabase.cartDao().addToCart(cartItem)  // Menambahkan item ke dalam database lokal
             runOnUiThread {
+                // Menampilkan toast setelah item berhasil ditambahkan ke keranjang
                 Toast.makeText(this, "Item ${barang.namaBarang} added to cart", Toast.LENGTH_SHORT).show()
             }
-        }.start()
+        }.start()  // Menjalankan operasi di background thread agar tidak mengganggu UI thread
     }
 }

@@ -22,7 +22,10 @@ class LoginActivity : AppCompatActivity() {
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Inisialisasi SharedPreferences untuk menyimpan status login
         sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+
+        // Inisialisasi database Room untuk validasi user
         appDatabase = AppDatabase.getInstance(applicationContext)
 
         // Mengecek apakah user sudah login sebelumnya
@@ -36,18 +39,18 @@ class LoginActivity : AppCompatActivity() {
 
         // Logika untuk tombol Login
         binding.btnLogin.setOnClickListener {
-            val username = binding.etUsername.text.toString()
-            val password = binding.etPassword.text.toString()
+            val username = binding.etUsername.text.toString()  // Mengambil input username
+            val password = binding.etPassword.text.toString()  // Mengambil input password
 
             if (username.isNotEmpty() && password.isNotEmpty()) {
                 // Validasi user dari database lokal menggunakan Room
-                lifecycleScope.launch(Dispatchers.IO) {  // Menjalankan di background thread
+                lifecycleScope.launch(Dispatchers.IO) {  // Menjalankan proses di background thread
                     val user = appDatabase.userDao().loginUser(username, password)
 
                     withContext(Dispatchers.Main) {
-                        // Pindah ke thread utama untuk update UI
+                        // Kembali ke thread utama untuk memperbarui UI
                         if (user != null) {
-                            // Jika ditemukan, login berhasil
+                            // Jika user ditemukan, login berhasil
                             val editor = sharedPreferences.edit()
                             editor.putBoolean("isLoggedIn", true)  // Tandai pengguna sudah login
                             editor.putString("username", username)  // Simpan username

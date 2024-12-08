@@ -1,7 +1,6 @@
 package com.example.rifqi_apk.model
 
-import com.google.gson.annotations.SerializedName
-
+//menyimpan informasi data yang diambil dari API
 data class Barang(
     val namaBarang: String,
     val harga: Int,
